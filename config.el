@@ -73,5 +73,92 @@
 ;;
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
+;; ============================================================
+;; Evil escape sequence: "fd" to exit insert mode
+;; ============================================================
+(after! evil-escape
+  (setq evil-escape-key-sequence "fd"
+        evil-escape-delay 0.3))
+
+;; ============================================================
+;; Custom functions
+;; ============================================================
+(defun toggle-maximize-buffer ()
+  "Maximize current buffer, toggling back when called again."
+  (interactive)
+  (if (= 1 (length (window-list)))
+      (jump-to-register '_)
+    (progn
+      (window-configuration-to-register '_)
+      (delete-other-windows))))
+
+(defun switch-to-scratch ()
+  "Switch to the scratch buffer."
+  (interactive)
+  (switch-to-buffer "*scratch*"))
+
+(defun switch-to-messages ()
+  "Switch to the messages buffer."
+  (interactive)
+  (switch-to-buffer "*Messages*"))
+
+;; ============================================================
+;; Keybindings
+;; ============================================================
+
+;; SPC SPC → M-x
 (map! :leader
-      :desc "Open like spacemacs" "SPC" #'counsel-M-x)
+      :desc "M-x" "SPC" #'execute-extended-command)
+
+;; Window management
+(map! :leader
+      :desc "Maximize buffer" "wm" #'toggle-maximize-buffer)
+
+;; Buffer shortcuts
+(map! :leader
+      :desc "Switch to scratch" "bs" #'switch-to-scratch
+      :desc "Switch to messages" "bm" #'switch-to-messages)
+
+;; Treemacs
+(map! :leader
+      :desc "Treemacs" "pt" #'treemacs)
+
+;; Git shortcuts (mirrors personal config: SPC gs / SPC gb)
+(map! :leader
+      :desc "Magit status" "gs" #'magit-status)
+
+;; Relay keystrokes in normal state (personal config muscle memory)
+;; "," sends C-c, "\" sends C-u
+(map! :n "," (cmd! (execute-kbd-macro (kbd "C-c")))
+      :n "\\" (cmd! (execute-kbd-macro (kbd "C-u"))))
+
+;; Text scale (global, mirrors M-0/M-+/M-- from personal config)
+(map! "M-0" (cmd! (text-scale-set 0))
+      "M-+" (cmd! (text-scale-increase 1))
+      "M--" (cmd! (text-scale-decrease 1)))
+
+;; C-j/C-k navigation in vertico (mirrors helm C-j/C-k)
+(after! vertico
+  (map! :map vertico-map
+        "C-j" #'vertico-next
+        "C-k" #'vertico-previous))
+
+;; C-j/C-k navigation in corfu (mirrors company C-j/C-k)
+(after! corfu
+  (map! :map corfu-map
+        "C-j" #'corfu-next
+        "C-k" #'corfu-previous))
+
+;; GitHub Copilot
+(use-package! copilot
+  :hook (prog-mode . copilot-mode)
+  :bind (:map copilot-completion-map
+         ("<tab>" . copilot-accept-completion)
+         ("TAB" . copilot-accept-completion)
+         ("<backspace>" . copilot-clear-overlay))
+  :config
+  (setq copilot-indent-offset-warning-disable t
+        copilot-idle-delay 0.1)
+  (advice-add 'copilot--on-doc-focus :around
+              (lambda (fn &rest args) (ignore-errors (apply fn args))))
+  (setq warning-suppress-log-types '((copilot))))
